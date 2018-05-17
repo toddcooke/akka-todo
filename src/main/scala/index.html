@@ -18,11 +18,14 @@
     const todoInput = document.getElementById("todoInput");
     const todoList = document.getElementById("todoList");
 
+    // Get saved todos
     (function () {
-        //Todo: should return todos, instead returns empty list
         fetchTodos()
             .then(data => {
                 console.log(data);
+                data.todos.forEach(function (todo) {
+                    appendTodo(todo)
+                })
             })
             .catch(er => console.log(er))
     })();

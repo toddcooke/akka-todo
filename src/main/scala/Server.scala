@@ -1,7 +1,7 @@
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.server.Route
@@ -9,12 +9,14 @@ import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import spray.json.RootJsonFormat
 
+import scala.collection.mutable
+
 trait JsonFormatter extends SprayJsonSupport {
 
   import spray.json.DefaultJsonProtocol._
 
-  implicit val todosFormat: RootJsonFormat[Todos] = jsonFormat1(Todos)
   implicit val todoFormat: RootJsonFormat[Todo] = jsonFormat3(Todo)
+  implicit val todosFormat: RootJsonFormat[Todos] = jsonFormat1(Todos)
   implicit val responseFormat: RootJsonFormat[Response] = jsonFormat1(Response)
 }
 
@@ -27,7 +29,7 @@ trait Routes extends JsonFormatter {
   implicit val timeout: Timeout = Timeout(5, TimeUnit.SECONDS)
   implicit val storage: ActorRef
 
-  val routes: Route = {
+  lazy val routes: Route = {
     concat(
       pathEndOrSingleSlash {
         getFromFile("src/main/scala/index.html")
@@ -59,9 +61,21 @@ final case class Todos(todos: Seq[Todo])
 
 final case class Response(message: String)
 
-object Storage {
+class Storage extends Actor with ActorLogging {
 
-  val todosList = Seq.empty[Todo]
+  import Storage._
+
+  override def receive: Receive = {
+    case GetTodos =>
+      sender() ! Todos(todosList.values.toSeq)
+    case CreateTodo(todo: Todo) =>
+      todosList.put(todo.date, todo)
+      println(todosList)
+      sender() ! todo
+  }
+}
+
+object Storage {
 
   final case class GetTodo(id: String)
 
@@ -69,19 +83,8 @@ object Storage {
 
   final case class CreateTodo(todo: Todo)
 
-}
+  var todosList = mutable.HashMap.empty[String, Todo]
 
-class Storage extends Actor {
-
-  import Storage._
-
-  override def receive: Receive = {
-    case GetTodos =>
-      sender() ! Todos(todosList)
-    case CreateTodo(todo: Todo) =>
-      todosList :+ todo
-      sender() ! todo
-  }
 }
 
 object Server extends App with Routes {
