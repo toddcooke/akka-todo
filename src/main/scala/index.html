@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>akka-todo</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css"
+          integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
+</head>
+<body>
+
+<input id="todoInput" class="form-control w-75 mx-auto mb-3" placeholder="What to do?" type="text" title="todo text">
+<ul class="list-group" id="todoList"></ul>
+
+<script>
+
+    const todoInput = document.getElementById("todoInput");
+    const todoList = document.getElementById("todoList");
+
+    todoInput.addEventListener("keyup", ev => {
+        if (ev.key === "Enter") {
+            if (todoInput.value === "") {
+                alert("Todo must not be empty");
+                return
+            }
+            createTodo()
+        }
+    });
+
+    // async function
+    async function fetchTodos() {
+        // await response of fetch call
+        let response = await
+            fetch('/todos');
+        return await response.json();
+    }
+
+    async function createTodo() {
+        let response = await fetch('/todos', {
+            method: 'POST',
+            headers: {},
+            body: todoInput.value,
+        });
+        await response.json()
+            .then(data => {
+                console.log(data);
+                // create a new div element
+                let newElm = document.createElement("li");
+                newElm.classList.add("list-group-item");
+                // and give it some content
+                let utcSeconds = data.date;
+                let d = new Date(0); // The 0 there is the key, which sets the date to the epoch
+                d.setUTCSeconds(utcSeconds);
+                let newContent = document.createTextNode(`${data.content} ${d}`);
+                // add the text node to the newly created div
+                newElm.appendChild(newContent);
+
+                let check = document.createElement("input");
+                check.type = "checkbox";
+                check.classList.add("form-check-input");
+                newElm.appendChild(check);
+
+                newElm.innerHTML = `
+                <div class="input-group mb-3">
+  <div class="input-group-prepend">
+    <div class="input-group-text">
+      <input type="checkbox">
+    </div>
+  </div>
+  <p class="form-control">${data.content} ${d}</p>
+</div>`;
+
+                // add the newly created element and its content into the DOM ;
+                document.body.insertBefore(newElm, todoList);
+                todoInput.value = ""
+            })
+            .catch(reason => console.log(reason))
+    }
+</script>
+</body>
+</html>
