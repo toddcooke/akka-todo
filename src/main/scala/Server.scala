@@ -59,9 +59,19 @@ final case class Todos(todos: Seq[Todo])
 
 final case class Response(message: String)
 
-class Storage extends Actor {
+object Storage {
 
   val todosList = Seq.empty[Todo]
+
+  final case class GetTodo(id: String)
+
+  final case class GetTodos()
+
+  final case class CreateTodo(todo: Todo)
+
+}
+
+class Storage extends Actor {
 
   import Storage._
 
@@ -72,16 +82,6 @@ class Storage extends Actor {
       todosList :+ todo
       sender() ! todo
   }
-}
-
-object Storage {
-
-  final case class GetTodo(id: String)
-
-  final case class GetTodos()
-
-  final case class CreateTodo(todo: Todo)
-
 }
 
 object Server extends App with Routes {

@@ -8,13 +8,24 @@
 </head>
 <body>
 
-<input id="todoInput" class="form-control w-75 mx-auto mb-3" placeholder="What to do?" type="text" title="todo text">
-<ul class="list-group" id="todoList"></ul>
+<div class="container mx-auto w-75">
+    <input id="todoInput" class="form-control mt-3 mb-3" placeholder="What to do?" type="text" title="todo text">
+    <div id="todoList"></div>
+</div>
 
 <script>
 
     const todoInput = document.getElementById("todoInput");
     const todoList = document.getElementById("todoList");
+
+    (function () {
+        //Todo: should return todos, instead returns empty list
+        fetchTodos()
+            .then(data => {
+                console.log(data);
+            })
+            .catch(er => console.log(er))
+    })();
 
     todoInput.addEventListener("keyup", ev => {
         if (ev.key === "Enter") {
@@ -26,9 +37,7 @@
         }
     });
 
-    // async function
     async function fetchTodos() {
-        // await response of fetch call
         let response = await
             fetch('/todos');
         return await response.json();
@@ -42,39 +51,35 @@
         });
         await response.json()
             .then(data => {
-                console.log(data);
-                // create a new div element
-                let newElm = document.createElement("li");
-                newElm.classList.add("list-group-item");
-                // and give it some content
-                let utcSeconds = data.date;
-                let d = new Date(0); // The 0 there is the key, which sets the date to the epoch
-                d.setUTCSeconds(utcSeconds);
-                let newContent = document.createTextNode(`${data.content} ${d}`);
-                // add the text node to the newly created div
-                newElm.appendChild(newContent);
+                appendTodo(data)
+            })
+            .catch(reason => console.log(reason))
+    }
 
-                let check = document.createElement("input");
-                check.type = "checkbox";
-                check.classList.add("form-check-input");
-                newElm.appendChild(check);
+    function appendTodo(data) {
+        console.log(data);
+        // create a new div element
+        let newElm = document.createElement("div");
 
-                newElm.innerHTML = `
+        let utcSeconds = data.date;
+        let d = new Date(0); // The 0 there is the key, which sets the date to the epoch
+        d.setUTCSeconds(utcSeconds);
+
+        newElm.innerHTML = `
                 <div class="input-group mb-3">
   <div class="input-group-prepend">
     <div class="input-group-text">
       <input type="checkbox">
     </div>
   </div>
-  <p class="form-control">${data.content} ${d}</p>
+  <p class="form-control">${data.content} ${d.getDay()}/${d.getMonth()}</p>
 </div>`;
 
-                // add the newly created element and its content into the DOM ;
-                document.body.insertBefore(newElm, todoList);
-                todoInput.value = ""
-            })
-            .catch(reason => console.log(reason))
+        // add the newly created element and its content into the DOM ;
+        todoList.insertBefore(newElm, null);
+        todoInput.value = ""
     }
+
 </script>
 </body>
 </html>
