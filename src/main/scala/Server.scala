@@ -1,6 +1,7 @@
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
+import Storage.Message
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
@@ -18,6 +19,7 @@ trait JsonFormatter extends SprayJsonSupport {
   implicit val todoFormat: RootJsonFormat[Todo] = jsonFormat3(Todo)
   implicit val todosFormat: RootJsonFormat[Todos] = jsonFormat1(Todos)
   implicit val responseFormat: RootJsonFormat[Response] = jsonFormat1(Response)
+  implicit val messageFormat: RootJsonFormat[Message] = jsonFormat1(Message)
 }
 
 trait Routes extends JsonFormatter {
@@ -47,6 +49,18 @@ trait Routes extends JsonFormatter {
               complete(result)
             }
             }
+          },
+          put {
+            entity(as[Todo]) { todo => {
+              if (todo.content.isEmpty) {
+                val result = (storage ? DeleteTodo(todo)).mapTo[Todo]
+                complete(result)
+              } else {
+                val result = (storage ? UpdateTodo(todo)).mapTo[Todo]
+                complete(result)
+              }
+            }
+            }
           }
         )
       }
@@ -70,7 +84,12 @@ class Storage extends Actor with ActorLogging {
       sender() ! Todos(todosList.values.toSeq)
     case CreateTodo(todo: Todo) =>
       todosList.put(todo.date, todo)
-      println(todosList)
+      sender() ! todo
+    case DeleteTodo(todo) =>
+      todosList.remove(todo.date)
+      sender() ! todo
+    case UpdateTodo(todo) =>
+      todosList.put(todo.date, todo)
       sender() ! todo
   }
 }
@@ -81,7 +100,13 @@ object Storage {
 
   final case class GetTodos()
 
+  final case class UpdateTodo(todo: Todo)
+
   final case class CreateTodo(todo: Todo)
+
+  final case class DeleteTodo(todo: Todo)
+
+  final case class Message(message: String)
 
   var todosList = mutable.HashMap.empty[String, Todo]
 

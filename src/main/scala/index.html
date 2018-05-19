@@ -9,7 +9,15 @@
 <body>
 
 <div class="container mx-auto w-75">
-    <input id="todoInput" class="form-control mt-3 mb-3" placeholder="What to do?" type="text" title="todo text">
+    <input
+            id="todoInput"
+            autofocus
+            class="form-control form-control-lg mt-3 mb-3"
+            placeholder="What to do?"
+            type="text"
+            title="todo text"
+    >
+    <hr class="w-75">
     <div id="todoList"></div>
 </div>
 
@@ -20,14 +28,13 @@
 
     // Get saved todos
     (function () {
-        fetchTodos()
+        fetchTodosRequest()
             .then(data => {
-                console.log(data);
                 data.todos.forEach(function (todo) {
                     appendTodo(todo)
                 })
             })
-            .catch(er => console.log(er))
+            .catch(er => console.error(er))
     })();
 
     todoInput.addEventListener("keyup", ev => {
@@ -36,17 +43,39 @@
                 alert("Todo must not be empty");
                 return
             }
-            createTodo()
+            createTodoRequest()
         }
     });
 
-    async function fetchTodos() {
+    async function fetchTodosRequest() {
         let response = await
             fetch('/todos');
         return await response.json();
     }
 
-    async function createTodo() {
+    async function updateTodoRequest(todo) {
+        let response = await fetch('/todos', {
+            method: 'PUT',
+            headers: {"content-type": "application/json"},
+            body: JSON.stringify({
+                date: todo.getAttribute("data-id"),
+                content: todo.value,
+                done: false
+            })
+        });
+        await response.json()
+            .then(data => {
+                if (data.content !== "") return;
+                todoList.childNodes.forEach(function (e) {
+                    if (e.firstElementChild.firstElementChild.getAttribute("data-id") === data.date.toString()) {
+                        e.remove()
+                    }
+                })
+            })
+            .catch(reason => console.error(reason))
+    }
+
+    async function createTodoRequest() {
         let response = await fetch('/todos', {
             method: 'POST',
             headers: {},
@@ -56,11 +85,10 @@
             .then(data => {
                 appendTodo(data)
             })
-            .catch(reason => console.log(reason))
+            .catch(reason => console.error(reason))
     }
 
     function appendTodo(data) {
-        console.log(data);
         // create a new div element
         let newElm = document.createElement("div");
 
@@ -69,13 +97,14 @@
         d.setUTCSeconds(utcSeconds);
 
         newElm.innerHTML = `
-                <div class="input-group mb-3">
-  <div class="input-group-prepend">
-    <div class="input-group-text">
-      <input type="checkbox">
-    </div>
-  </div>
-  <p class="form-control">${data.content} ${d.getDay()}/${d.getMonth()}</p>
+<div class="input-group mb-3">
+  <input
+      data-id="${data.date}"
+      type="text"
+      onblur="updateTodoRequest(this)"
+      value="${data.content}"
+      class="form-control"
+  />
 </div>`;
 
         // add the newly created element and its content into the DOM ;
